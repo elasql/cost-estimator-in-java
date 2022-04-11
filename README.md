@@ -42,17 +42,17 @@ Parameters:
 This step trains a cost estimator and saves the model.
 
 ```
-> java -jar [JAR FILE] train [Data Set Dir] [Model Save Dir]
+> java -jar [Jar File] train [Data Set Dir] [Model Save Dir]
 ```
 
-- `[JAR FILE]`: the path to the built jar file. This is usually `target/estimator-[version number]-jar-with-dependencies.jar`
+- `[Jar File]`: the path to the built jar file. This is usually `target/estimator-[version number]-jar-with-dependencies.jar`
 - `[Data Set Dir]`: the path to the directory that holds the training data set
 - `[Model Save Dir]`: the path to save the model
 
-Note that this program also needs a configuration file. We assumes the configuration file is called `config.toml` and is placed in the working directory. If it is not the case, you can use the following command to specify the position of the file:
+Note that this program also needs a configuration file. We assume the configuration file is called `config.toml` and is placed in the working directory. If it is not the case, you can use the following command to specify the path to the file:
 
 ```
-> java -jar [JAR FILE] train -c [Config File] [Data Set Dir] [Model Save Dir]
+> java -jar [Jar File] train -c [Config File] [Data Set Dir] [Model Save Dir]
 ```
 
 - `[Config File]`: the path to the configuration file. The default is `./config.toml`.
