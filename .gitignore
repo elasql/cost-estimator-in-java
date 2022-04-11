@@ -1,0 +1,16 @@
+
+### Eclipse ###
+.settings/
+.recommenders
+.classpath
+.project
+target/
+
+
+### Testing ###
+test/
+
+### Others ###
+design
+
+.DS_Store

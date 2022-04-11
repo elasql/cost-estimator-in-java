@@ -1,0 +1,15 @@
+
+[global]
+
+# The number of the servers
+server_num = 4
+
+[preprocessor]
+
+# The unit of warmup_time is micro-second. Default is 60s, which is 60_000_000
+warmup_time = 60000000
+
+[training]
+
+training_data_size = 100000
+outlier_std_threshold = 1.0
