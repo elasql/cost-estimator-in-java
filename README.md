@@ -1,6 +1,6 @@
 # Cost Estimator (Java)
 
-This project aims to replicate the model of [our Python estimator](https://github.com/elasql/cost-estimator).
+This project aims to replicate the model of [our Python estimator](https://github.com/elasql/cost-estimator) in Java. This allows us to port this model to ElaSQL.
 
 ## Prerequisite
 
@@ -14,7 +14,7 @@ This project aims to replicate the model of [our Python estimator](https://githu
 > mvn package
 ```
 
-This command generates a file called `estimator-[version number]-jar-with-dependencies`, which includes all the dependencies that this program needs and information for startting the program, in `target` directory.
+This command generates a file called `estimator-[version number]-jar-with-dependencies.jar`, which includes all the dependencies that this program needs and information for startting the program, in `target` directory.
 
 ## Run
 
@@ -48,3 +48,12 @@ This step trains a cost estimator and saves the model.
 - `[JAR FILE]`: the path to the built jar file. This is usually `target/estimator-[version number]-jar-with-dependencies.jar`
 - `[Data Set Dir]`: the path to the directory that holds the training data set
 - `[Model Save Dir]`: the path to save the model
+
+Note that this program also needs a configuration file. We assumes the configuration file is called `config.toml` and is placed in the working directory. If it is not the case, you can use the following command to specify the position of the file:
+
+```
+> java -jar [JAR FILE] train -c [Config File] [Data Set Dir] [Model Save Dir]
+```
+
+- `[Config File]`: the path to the configuration file. The default is `./config.toml`.
+
