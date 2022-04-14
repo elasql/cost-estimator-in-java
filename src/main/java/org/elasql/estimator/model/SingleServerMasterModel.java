@@ -1,5 +1,12 @@
 package org.elasql.estimator.model;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -13,8 +20,10 @@ import smile.data.formula.Formula;
 import smile.regression.RandomForest;
 import smile.validation.RegressionMetrics;
 
-public class SingleServerMasterModel {
+public class SingleServerMasterModel implements Serializable {
 	private static Logger logger = Logger.getLogger(SingleServerMasterModel.class.getName());
+	
+	private static final long serialVersionUID = 20220412001L;
 	
 	public static SingleServerMasterModel fit(DataSet trainingSet) {
 		Map<String, RandomForest> models = new HashMap<String, RandomForest>();
@@ -41,6 +50,14 @@ public class SingleServerMasterModel {
 		return new SingleServerMasterModel(models);
 	}
 	
+	public static SingleServerMasterModel loadFromFile(File modelFilePath) throws IOException, ClassNotFoundException {
+		SingleServerMasterModel model = null;
+		try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(modelFilePath))) {
+			model = (SingleServerMasterModel) in.readObject();
+		}
+		return model;
+	}
+	
 	private Map<String, RandomForest> ouModels;
 	
 	private SingleServerMasterModel(Map<String, RandomForest> models) {
@@ -57,5 +74,12 @@ public class SingleServerMasterModel {
 		}
 		
 		return sum / predictions.length;
+	}
+	
+	public void saveToFile(File savePath) throws IOException {
+		try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(savePath))) {
+			out.writeObject(this);
+			out.flush();
+		}
 	}
 }
