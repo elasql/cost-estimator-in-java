@@ -8,8 +8,10 @@ import java.util.List;
 
 import org.apache.commons.csv.CSVFormat;
 import org.elasql.estimator.Config;
+import org.elasql.estimator.Constants;
 
 import smile.data.DataFrame;
+import smile.data.type.StructType;
 import smile.io.CSV;
 
 public class DataSet {
@@ -38,21 +40,22 @@ public class DataSet {
 	private static DataFrame loadFeatureFile(File dataSetDir, int serverId) {
 		String featureFileName = String.format("server-%d-features.csv", serverId);
 		File featureFilePath = new File(dataSetDir, featureFileName);
-		return loadCsvAsDataFrame(featureFilePath.toPath());
+		return loadCsvAsDataFrame(featureFilePath.toPath(), Constants.FEATURE_CSV_SCHEMA);
 	}
 	
 	private static DataFrame loadLabelFile(File dataSetDir, int serverId) {
 		String labelFileName = String.format("server-%d-labels.csv", serverId);
 		File labelFilePath = new File(dataSetDir, labelFileName);
-		return loadCsvAsDataFrame(labelFilePath.toPath());
+		return loadCsvAsDataFrame(labelFilePath.toPath(), Constants.LABEL_CSV_SCHEMA);
 	}
 	
-	private static DataFrame loadCsvAsDataFrame(Path path) {
+	private static DataFrame loadCsvAsDataFrame(Path path, StructType schema) {
 		DataFrame df = null;
 		try {
 			CSVFormat.Builder builder = CSVFormat.Builder.create();
 			builder.setHeader(); // Make it infer the header names from the first row
 			CSV csv = new CSV(builder.build());
+			csv.schema(schema);
 			df = csv.read(path);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -86,8 +89,8 @@ public class DataSet {
 	}
 	
 	public DataFrame toTrainingDataFrame(String labelField) {
-		// Remove Transaction ID
-		DataFrame df = features.drop("Transaction ID");
+		// Remove the id field
+		DataFrame df = features.drop(Constants.ID_FIELD_NAME);
 		
 		// Merge the label column
 		DataFrame trainingDf = df.merge(labels.column(labelField));
