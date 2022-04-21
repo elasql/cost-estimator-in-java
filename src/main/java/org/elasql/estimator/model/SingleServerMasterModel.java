@@ -16,6 +16,7 @@ import org.elasql.estimator.Constants;
 import org.elasql.estimator.data.DataSet;
 
 import smile.data.DataFrame;
+import smile.data.Tuple;
 import smile.data.formula.Formula;
 import smile.regression.RandomForest;
 import smile.validation.RegressionMetrics;
@@ -74,6 +75,11 @@ public class SingleServerMasterModel implements Serializable {
 		}
 		
 		return sum / predictions.length;
+	}
+	
+	public double predict(String ouName, Tuple features) {
+		RandomForest model = ouModels.get(ouName);
+		return model.predict(features);
 	}
 	
 	public void saveToFile(File savePath) throws IOException {
