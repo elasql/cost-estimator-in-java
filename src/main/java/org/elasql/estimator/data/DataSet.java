@@ -1,18 +1,14 @@
 package org.elasql.estimator.data;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.csv.CSVFormat;
 import org.elasql.estimator.Config;
 import org.elasql.estimator.Constants;
+import org.elasql.estimator.NewConstants;
 
 import smile.data.DataFrame;
-import smile.data.type.StructType;
-import smile.io.CSV;
 
 public class DataSet {
 
@@ -20,48 +16,38 @@ public class DataSet {
 	 * Read the data set from the given path and separate the data set
 	 * for each server.
 	 * 
-	 * @param dataSetDir
+	 * @param rawDataDir
 	 * @return
 	 */
-	public static List<DataSet> load(Config config, File dataSetDir) {
-		List<DataSet> dataSets = new ArrayList<DataSet>(config.serverNum());
-		
+	public static List<DataSet> loadFromRawData(Config config, File rawDataDir) {
+		DataFrame featureDf = loadFeatureFile(rawDataDir);
 		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
-			DataFrame featureDataFrame = loadFeatureFile(dataSetDir, serverId);
-			DataFrame labelDataFrame = loadLabelFile(dataSetDir, serverId);
-			DataSet dataSet = new DataSet(featureDataFrame, labelDataFrame,
-					config.outlinerStdThreshold());
-			dataSets.add(dataSet);
+			DataFrame labelDf = loadLabelFile(rawDataDir, serverId);
 		}
 		
-		return dataSets;
+//		List<DataSet> dataSets = new ArrayList<DataSet>(config.serverNum());
+//		
+//		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
+//			DataFrame featureDataFrame = loadFeatureFile(rawDataDir, serverId);
+//			DataFrame labelDataFrame = loadLabelFile(rawDataDir, serverId);
+//			DataSet dataSet = new DataSet(featureDataFrame, labelDataFrame,
+//					config.outlinerStdThreshold());
+//			dataSets.add(dataSet);
+//		}
+//		
+//		return dataSets;
 	}
 	
-	private static DataFrame loadFeatureFile(File dataSetDir, int serverId) {
-		String featureFileName = String.format("server-%d-features.csv", serverId);
-		File featureFilePath = new File(dataSetDir, featureFileName);
-		return loadCsvAsDataFrame(featureFilePath.toPath(), Constants.FEATURE_CSV_SCHEMA);
+	private static DataFrame loadFeatureFile(File rawDataDir) {
+		File featureFilePath = new File(rawDataDir, NewConstants.FILE_NAME_FEATURE);
+		return CsvLoader.load(featureFilePath.toPath());
 	}
 	
-	private static DataFrame loadLabelFile(File dataSetDir, int serverId) {
-		String labelFileName = String.format("server-%d-labels.csv", serverId);
-		File labelFilePath = new File(dataSetDir, labelFileName);
-		return loadCsvAsDataFrame(labelFilePath.toPath(), Constants.LABEL_CSV_SCHEMA);
-	}
-	
-	private static DataFrame loadCsvAsDataFrame(Path path, StructType schema) {
-		DataFrame df = null;
-		try {
-			CSVFormat.Builder builder = CSVFormat.Builder.create();
-			builder.setHeader(); // Make it infer the header names from the first row
-			CSV csv = new CSV(builder.build());
-			csv.schema(schema);
-			df = csv.read(path);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		return df;
+	private static DataFrame loadLabelFile(File rawDataDir, int serverId) {
+		String labelFileName = String.format("%s-%d.csv",
+				NewConstants.FILE_NAME_LATENCY_PREFIX, serverId);
+		File labelFilePath = new File(rawDataDir, labelFileName);
+		return CsvLoader.load(labelFilePath.toPath());
 	}
 	
 	private DataFrame features;

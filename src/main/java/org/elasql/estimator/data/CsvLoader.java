@@ -1,6 +1,5 @@
 package org.elasql.estimator.data;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -21,14 +20,6 @@ import smile.data.type.StructField;
 import smile.data.type.StructType;
 
 public class CsvLoader {
-
-	public static void main(String[] args) {
-		File p = new File("D:\\datalab\\research-2021-hermes-control\\data-sets\\estimator\\training-data\\transaction-features.csv");
-//		File p = new File("D:\\datalab\\research-2021-hermes-control\\data-sets\\estimator\\training-data\\transaction-latency-server-0.csv");
-		DataFrame a = load(p.toPath());
-		System.out.println(a.size());
-		System.out.println(a.toString(25));
-	}
 	
 	public static DataFrame load(Path path) {
 		try {

@@ -8,6 +8,15 @@ This project aims to replicate the model of [our Python estimator](https://githu
 - Python >= 3.8
 - Maven
 
+## Assumptions for the Training Data Set
+
+- All values except the following fields can be read as `Double`s
+  - `Transaction ID`: Long
+  - `Is Master`: Boolean
+  - `Is Distributed`: Boolean
+  - `Start Time`: Long
+- All arrays store features of every server so that we can separate the features for each individual servers from the arrays
+
 ## Build
 
 ```
