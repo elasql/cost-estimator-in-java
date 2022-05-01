@@ -62,6 +62,7 @@ public class Constants {
 	public static final String ID_FIELD_NAME = "Transaction ID";
 	
 	public static final StructType FEATURE_SCHEMA;
+	
 	public static final StructType FEATURE_CSV_SCHEMA;
 	public static final StructType LABEL_CSV_SCHEMA;
 	
