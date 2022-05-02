@@ -1,9 +1,13 @@
 package org.elasql.estimator.data;
 
-import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
+
+import org.elasql.estimator.Config;
+import org.elasql.estimator.NewConstants;
 
 import smile.data.DataFrame;
 import smile.data.Tuple;
@@ -13,31 +17,59 @@ import smile.data.type.StructField;
 import smile.data.type.StructType;
 
 public class Preprocessor {
-
-	public static void main(String[] args) {
-		File p = new File("D:\\datalab\\research-2021-hermes-control\\data-sets\\estimator\\training-data\\transaction-features.csv");
-//		File p = new File("D:\\datalab\\research-2021-hermes-control\\data-sets\\estimator\\training-data\\transaction-latency-server-0.csv");
-		DataFrame a = CsvLoader.load(p.toPath());
-		System.out.println(a.size());
-		System.out.println(a.toString(25));
-		DataFrame df = separateArrayFeatures(a, 0);
-		System.out.println(df.size());
-		System.out.println(df.toString(25));
+	
+	public static DataFrame[] preprocess(DataFrame features, DataFrame labels, int serverId) {
+		Stream<Tuple> featStream = features.stream();
+		Stream<Tuple> labelStream = labels.stream();
+		
+		// Separate array features
+		StructType oldFeatSchema = features.schema();
+		StructType newFeatSchema = newSchemaWithSeparatedArrays(oldFeatSchema);
+		featStream = separateArrayFeatures(featStream, oldFeatSchema, newFeatSchema, serverId);
+		
+		// Filter rows that do not appear in both sides
+		Iterator<Tuple> featIter = sort(featStream).iterator();
+		Iterator<Tuple> labelIter = sort(labelStream).iterator();
+		
+		// Join tuples
+		List<Tuple> newFeatureRows = new ArrayList<Tuple>();
+		List<Tuple> newLabelRows = new ArrayList<Tuple>();
+		Tuple featTuple = featIter.next();
+		Tuple labelTuple = labelIter.next();
+		while (featIter.hasNext() && labelIter.hasNext()) {
+			long featId = featTuple.getLong(NewConstants.FIELD_NAME_ID);
+			long labelId = labelTuple.getLong(NewConstants.FIELD_NAME_ID);
+			
+			if (featId < labelId) {
+				featTuple = featIter.next();
+			} else if (featId > labelId) {
+				labelTuple = labelIter.next();
+			} else {
+				newFeatureRows.add(featTuple);
+				newLabelRows.add(labelTuple);
+			}
+		}
+		
+		// Create new DataFrame
+		DataFrame newFeatures = DataFrame.of(newFeatureRows, features.schema());
+		DataFrame newLabels = DataFrame.of(newLabelRows, labels.schema());
+		
+		// Drop columns
+		newFeatures = newFeatures.drop(NewConstants.FIELD_NAME_START_TIME);
+		newLabels = newLabels.drop(NewConstants.FIELD_NAME_IS_MASTER,
+				NewConstants.FIELD_NAME_IS_DIST);
+		
+		return new DataFrame[] {newFeatures, newLabels};
 	}
 	
-	public static DataFrame separateArrayFeatures(DataFrame features, int serverId) {
-		StructType schema = features.schema();
-		StructType newSchema = newSchemaWithSeparatedArrays(schema);
-		
-		List<Tuple> newTuples = new ArrayList<Tuple>(features.nrows());
-		Iterator<Tuple> tupleIter = features.stream().iterator();
-		while (tupleIter.hasNext()) {
-			Tuple tuple = tupleIter.next();
-			Object[] row = new Object[schema.length()];
+	private static Stream<Tuple> separateArrayFeatures(Stream<Tuple> stream,
+			StructType oldSchema, StructType newSchema, int serverId) {
+		return stream.map(tuple -> {
+			Object[] row = new Object[oldSchema.length()];
 			
 			// Pick out server i's data from arrays
-			for (int i = 0; i < schema.length(); i++) {
-	        	if (schema.field(i).type == DataTypes.DoubleArrayType) {
+			for (int i = 0; i < oldSchema.length(); i++) {
+	        	if (oldSchema.field(i).type == DataTypes.DoubleArrayType) {
 	        		double[] array = (double[]) tuple.get(i);
 	        		row[i] = array[serverId];
 	        	} else {
@@ -45,10 +77,18 @@ public class Preprocessor {
 	        	}
 	        }
 			
-			newTuples.add(Tuple.of(row, newSchema));
-		}
-		
-		return DataFrame.of(newTuples, newSchema);
+			return Tuple.of(row, newSchema);
+		});
+	}
+	
+	private static Stream<Tuple> sort(Stream<Tuple> stream) {
+		return stream.sorted(new Comparator<Tuple>() {
+			public int compare(Tuple t1, Tuple t2) {
+				long id1 = t1.getLong(NewConstants.FIELD_NAME_ID);
+				long id2 = t2.getLong(NewConstants.FIELD_NAME_ID);
+				return (int) (id1 - id2);
+			}
+		});
 	}
 	
 	private static StructType newSchemaWithSeparatedArrays(StructType schema) {

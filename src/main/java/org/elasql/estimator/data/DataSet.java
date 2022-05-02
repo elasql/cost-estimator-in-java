@@ -1,6 +1,7 @@
 package org.elasql.estimator.data;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +13,13 @@ import smile.data.DataFrame;
 
 public class DataSet {
 
+	public static void main(String[] args) throws IOException {
+		File dataDir = new File("R:\\Research\\2021-Hermes-Control\\java-workspace\\estimator\\test\\training-data");
+		File configFile = new File("R:\\Research\\2021-Hermes-Control\\java-workspace\\estimator\\test\\config.toml");
+		Config config = Config.load(configFile);
+		loadFromRawData(config, dataDir);
+	}
+
 	/**
 	 * Read the data set from the given path and separate the data set
 	 * for each server.
@@ -20,10 +28,15 @@ public class DataSet {
 	 * @return
 	 */
 	public static List<DataSet> loadFromRawData(Config config, File rawDataDir) {
-		DataFrame featureDf = loadFeatureFile(rawDataDir);
+		DataFrame featureDf = loadFeatureFile(rawDataDir, config.warmUpEndTime());
 		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
 			DataFrame labelDf = loadLabelFile(rawDataDir, serverId);
+			DataFrame[] dfs = Preprocessor.preprocess(featureDf, labelDf, serverId);
+			System.out.println(dfs[0]);
+			System.out.println(dfs[1]);
 		}
+		
+		return null;
 		
 //		List<DataSet> dataSets = new ArrayList<DataSet>(config.serverNum());
 //		
@@ -38,16 +51,27 @@ public class DataSet {
 //		return dataSets;
 	}
 	
-	private static DataFrame loadFeatureFile(File rawDataDir) {
-		File featureFilePath = new File(rawDataDir, NewConstants.FILE_NAME_FEATURE);
-		return CsvLoader.load(featureFilePath.toPath());
+	private static DataFrame loadFeatureFile(File rawDataDir, long warmUpEndTime) {
+		String featureFileName = String.format("%s.csv",
+				NewConstants.FILE_NAME_FEATURE);
+		File featureFilePath = new File(rawDataDir, featureFileName);
+		
+		// Load the features that start time > warm up time
+		return CsvLoader.load(featureFilePath.toPath(), tuple -> {
+			long startTime = tuple.getLong(NewConstants.FIELD_NAME_START_TIME);
+			return startTime > warmUpEndTime;
+		});
 	}
 	
 	private static DataFrame loadLabelFile(File rawDataDir, int serverId) {
 		String labelFileName = String.format("%s-%d.csv",
 				NewConstants.FILE_NAME_LATENCY_PREFIX, serverId);
 		File labelFilePath = new File(rawDataDir, labelFileName);
-		return CsvLoader.load(labelFilePath.toPath());
+		
+		// Load the labels that is as a master transaction
+		return CsvLoader.load(labelFilePath.toPath(), tuple -> 
+			tuple.getBoolean(NewConstants.FIELD_NAME_IS_MASTER)
+		);
 	}
 	
 	private DataFrame features;

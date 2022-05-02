@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -21,7 +22,7 @@ import smile.data.type.StructType;
 
 public class CsvLoader {
 	
-	public static DataFrame load(Path path) {
+	public static DataFrame load(Path path, Predicate<Tuple> filter) {
 		try {
 			StructType schema = inferSchema(path);
 	        List<Function<String, Object>> valParsers = schema.parser();
@@ -37,7 +38,10 @@ public class CsvLoader {
 	            	
 	            	// Parse data
 	            	Tuple tuple = parseCsvRecord(record, schema, valParsers);
-	                rows.add(tuple);
+	            	
+	            	// Add only the row that matches the predicate
+	            	if (filter.test(tuple))
+	            		rows.add(tuple);
 	            }
 	            
 	            // Wrap the data to a data frame
