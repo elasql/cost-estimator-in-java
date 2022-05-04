@@ -111,7 +111,7 @@ public class DataSet {
 		return features;
 	}
 	
-	public double[] getLabelVectorInDouble(String labelField) {
+	public double[] getLabels(String labelField) {
 		return labels.column(labelField).toDoubleArray();
 	}
 	

@@ -65,19 +65,12 @@ public class SingleServerMasterModel implements Serializable {
 		this.ouModels = models;
 	}
 	
-	public double testMeanAbsoluteError(String ouName, DataFrame testFeatures, double[] testLabels) {
+	public double predict(String ouName, Tuple features) {
 		RandomForest model = ouModels.get(ouName);
-		double[] predictions = model.predict(testFeatures);
-		
-		double sum = 0.0;
-		for (int i = 0; i < predictions.length; i++) {
-			sum += Math.abs(predictions[i] - testLabels[i]);
-		}
-		
-		return sum / predictions.length;
+		return model.predict(features);
 	}
 	
-	public double predict(String ouName, Tuple features) {
+	public double[] predict(String ouName, DataFrame features) {
 		RandomForest model = ouModels.get(ouName);
 		return model.predict(features);
 	}
