@@ -59,11 +59,17 @@ public class Constants {
         "Number of Commit Tx in Last 1000 us"
 	};
 	
-	public static final String ID_FIELD_NAME = "Transaction ID";
-	
 	public static final StructType FEATURE_SCHEMA;
-	public static final StructType FEATURE_CSV_SCHEMA;
-	public static final StructType LABEL_CSV_SCHEMA;
+	
+	// Field names in CSV files
+	public static final String FIELD_NAME_ID = "Transaction ID";
+	public static final String FIELD_NAME_IS_MASTER = "Is Master";
+	public static final String FIELD_NAME_IS_DIST = "Is Distributed";
+	public static final String FIELD_NAME_START_TIME = "Start Time";
+	
+	// File names
+	public static final String FILE_NAME_FEATURE = "transaction-features";
+	public static final String FILE_NAME_LATENCY_PREFIX = "transaction-latency-server";
 	
 	static {
 		List<StructField> featureFields = new ArrayList<StructField>();
@@ -78,21 +84,9 @@ public class Constants {
 		}
 		
 		List<StructField> featureFieldsWithId = new ArrayList<StructField>();
-		featureFieldsWithId.add(new StructField(ID_FIELD_NAME, DataTypes.LongType));
+		featureFieldsWithId.add(new StructField(FIELD_NAME_ID, DataTypes.LongType));
 		featureFieldsWithId.addAll(featureFields);
 		
 		FEATURE_SCHEMA = new StructType(featureFields);
-		FEATURE_CSV_SCHEMA = new StructType(featureFieldsWithId);
-		
-		
-		List<StructField> labelFields = new ArrayList<StructField>();
-
-		labelFields.add(new StructField(ID_FIELD_NAME, DataTypes.LongType));
-		for (int i = 0; i < OU_NAMES.length; i++) {
-			labelFields.add(new StructField(OU_NAMES[i],
-					DataTypes.IntegerType));
-		}
-		
-		LABEL_CSV_SCHEMA = new StructType(labelFields);
 	}
 }

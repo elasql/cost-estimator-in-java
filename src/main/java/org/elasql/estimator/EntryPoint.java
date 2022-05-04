@@ -3,19 +3,18 @@ package org.elasql.estimator;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.elasql.estimator.data.DataSet;
 import org.elasql.estimator.model.SingleServerMasterModel;
+import org.elasql.estimator.model.evaluator.TrainingModelEvaluator;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import smile.data.DataFrame;
 
 @Command(name = "estimator", mixinStandardHelpOptions = true, version = "ElaSQL Estimator 0.1",
 		 description = "A cost estimator for ElaSQL transactions")
@@ -50,22 +49,22 @@ public class EntryPoint {
 		
 		// Load the data set
 		if (logger.isLoggable(Level.INFO))
-			logger.info("Loading data set...");
+			logger.info("Loading and pre-processing data set...");
 		
-		List<DataSet> dataSets = DataSet.load(config, dataSetDir);
+		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
 		
 		if (logger.isLoggable(Level.INFO))
-			logger.info("All data are loaded");
+			logger.info("All data are loaded and processed.");
 		
 		// For each server
-		ReportBuilder reportBuilder = new ReportBuilder();
+		TrainingModelEvaluator evaluator = new TrainingModelEvaluator();
 		for (int serverId = 0; serverId < dataSets.size(); serverId++) {
 			
 			// Split the data set to training set and testing set
 			DataSet dataSet = dataSets.get(serverId);
-			List<DataSet> trainTestSets = dataSet.trainTestSplit(config.trainingDataSize());
-			DataSet trainSet = trainTestSets.get(0);
-			DataSet testSet = trainTestSets.get(1);
+			DataSet[] trainTestSets = dataSet.trainTestSplit(config.trainingDataRatio());
+			DataSet trainSet = trainTestSets[0];
+			DataSet testSet = trainTestSets[1];
 			
 			// Train a master model for each server
 			if (logger.isLoggable(Level.INFO))
@@ -77,7 +76,7 @@ public class EntryPoint {
 				logger.info("Training models for server #" + serverId + " completed");
 			
 			// Evaluate the model
-			evaluateModel(serverId, testSet, model, reportBuilder);
+			evaluator.evaluateModel(serverId, trainSet, testSet, model);
 			
 			// Save the model
 			try {
@@ -89,83 +88,67 @@ public class EntryPoint {
 		}
 		
 		// Save the report
-		try {
-			reportBuilder.writeToFile(new File("training-report.csv"));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		evaluator.generateReport(new File("training-report.csv"));
 		
 		return 0;
 	}
 	
-	@Command(name = "test", mixinStandardHelpOptions = true)
-	public int test(
-			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir,
-			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir
-		) {
-		
-		// Load the configurations
-		Config config = Config.load(configFile);
-		
-		if (logger.isLoggable(Level.INFO))
-			logger.info("Loading the data set and the models...");
-
-		// Load the data set
-		List<DataSet> dataSets = DataSet.load(config, dataSetDir);
-		
-		// Load the models
-		List<SingleServerMasterModel> models = new ArrayList<SingleServerMasterModel>();
-		try {
-			for (int serverId = 0; serverId < config.serverNum(); serverId++) {
-				File modelFilePath = new File(modelDir, "model-" + serverId + ".bin");
-				SingleServerMasterModel model = SingleServerMasterModel.loadFromFile(modelFilePath);
-				models.add(model);
-			}
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-		
-		if (logger.isLoggable(Level.INFO))
-			logger.info("All the data and models are loaded");
-		
-		if (logger.isLoggable(Level.INFO))
-			logger.info("Testing the models...");
-		
-		// Test the model with data set
-		ReportBuilder reportBuilder = new ReportBuilder();
-		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
-			DataSet dataSet = dataSets.get(serverId);
-			SingleServerMasterModel model = models.get(serverId);
-
-			// Evaluate the model
-			evaluateModel(serverId, dataSet, model, reportBuilder);
-		}
-		
-		if (logger.isLoggable(Level.INFO))
-			logger.info("Testing completed. Generating a report...");
-		
-		// Save the report
-		try {
-			reportBuilder.writeToFile(new File("testing-report.csv"));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-		
-		if (logger.isLoggable(Level.INFO))
-			logger.info("The report is generated.");
-		
-		return 0;
-	}
-	
-	private void evaluateModel(int serverId, DataSet dataSet, SingleServerMasterModel model,
-			ReportBuilder reportBuilder) {
-		DataFrame testFeatures = dataSet.getFeatures();
-		for (String ouName : Constants.OU_NAMES) {
-			double mean = dataSet.labelMean(ouName);
-			double std = dataSet.labelStd(ouName);
-			double[] labels = dataSet.getLabelVectorInDouble(ouName);
-			double mae = model.testMeanAbsoluteError(ouName, testFeatures, labels);
-			reportBuilder.writeRow(serverId, ouName, mean, std, mae);
-		}
-	}
+//	@Command(name = "test", mixinStandardHelpOptions = true)
+//	public int test(
+//			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir,
+//			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir
+//		) {
+//		
+//		// Load the configurations
+//		Config config = Config.load(configFile);
+//		
+//		if (logger.isLoggable(Level.INFO))
+//			logger.info("Loading the data set and the models...");
+//
+//		// Load the data set
+//		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
+//		
+//		// Load the models
+//		List<SingleServerMasterModel> models = new ArrayList<SingleServerMasterModel>();
+//		try {
+//			for (int serverId = 0; serverId < config.serverNum(); serverId++) {
+//				File modelFilePath = new File(modelDir, "model-" + serverId + ".bin");
+//				SingleServerMasterModel model = SingleServerMasterModel.loadFromFile(modelFilePath);
+//				models.add(model);
+//			}
+//		} catch (Exception e) {
+//			throw new RuntimeException(e);
+//		}
+//		
+//		if (logger.isLoggable(Level.INFO))
+//			logger.info("All the data and models are loaded");
+//		
+//		if (logger.isLoggable(Level.INFO))
+//			logger.info("Testing the models...");
+//		
+//		// Test the model with data set
+//		ReportBuilder reportBuilder = new ReportBuilder();
+//		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
+//			DataSet dataSet = dataSets.get(serverId);
+//			SingleServerMasterModel model = models.get(serverId);
+//
+//			// Evaluate the model
+//			evaluateModel(serverId, dataSet, model, reportBuilder);
+//		}
+//		
+//		if (logger.isLoggable(Level.INFO))
+//			logger.info("Testing completed. Generating a report...");
+//		
+//		// Save the report
+//		try {
+//			reportBuilder.writeToFile(new File("testing-report.csv"));
+//		} catch (IOException e) {
+//			throw new RuntimeException(e);
+//		}
+//		
+//		if (logger.isLoggable(Level.INFO))
+//			logger.info("The report is generated.");
+//		
+//		return 0;
+//	}
 }

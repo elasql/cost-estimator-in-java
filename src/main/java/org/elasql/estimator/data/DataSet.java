@@ -2,34 +2,38 @@ package org.elasql.estimator.data;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.csv.CSVFormat;
 import org.elasql.estimator.Config;
 import org.elasql.estimator.Constants;
 
 import smile.data.DataFrame;
-import smile.data.type.StructType;
-import smile.io.CSV;
 
 public class DataSet {
+
+	public static void main(String[] args) throws IOException {
+		File dataDir = new File("R:\\Research\\2021-Hermes-Control\\java-workspace\\estimator\\test\\training-data");
+		File configFile = new File("R:\\Research\\2021-Hermes-Control\\java-workspace\\estimator\\test\\config.toml");
+		Config config = Config.load(configFile);
+		loadFromRawData(config, dataDir);
+	}
 
 	/**
 	 * Read the data set from the given path and separate the data set
 	 * for each server.
 	 * 
-	 * @param dataSetDir
+	 * @param rawDataDir
 	 * @return
 	 */
-	public static List<DataSet> load(Config config, File dataSetDir) {
+	public static List<DataSet> loadFromRawData(Config config, File rawDataDir) {
 		List<DataSet> dataSets = new ArrayList<DataSet>(config.serverNum());
 		
+		DataFrame featureDf = loadFeatureFile(rawDataDir, config.warmUpEndTime());
 		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
-			DataFrame featureDataFrame = loadFeatureFile(dataSetDir, serverId);
-			DataFrame labelDataFrame = loadLabelFile(dataSetDir, serverId);
-			DataSet dataSet = new DataSet(featureDataFrame, labelDataFrame,
+			DataFrame labelDf = loadLabelFile(rawDataDir, serverId);
+			DataFrame[] dfs = Preprocessor.preprocess(featureDf, labelDf, serverId);
+			DataSet dataSet = new DataSet(dfs[0], dfs[1],
 					config.outlinerStdThreshold());
 			dataSets.add(dataSet);
 		}
@@ -37,31 +41,27 @@ public class DataSet {
 		return dataSets;
 	}
 	
-	private static DataFrame loadFeatureFile(File dataSetDir, int serverId) {
-		String featureFileName = String.format("server-%d-features.csv", serverId);
-		File featureFilePath = new File(dataSetDir, featureFileName);
-		return loadCsvAsDataFrame(featureFilePath.toPath(), Constants.FEATURE_CSV_SCHEMA);
-	}
-	
-	private static DataFrame loadLabelFile(File dataSetDir, int serverId) {
-		String labelFileName = String.format("server-%d-labels.csv", serverId);
-		File labelFilePath = new File(dataSetDir, labelFileName);
-		return loadCsvAsDataFrame(labelFilePath.toPath(), Constants.LABEL_CSV_SCHEMA);
-	}
-	
-	private static DataFrame loadCsvAsDataFrame(Path path, StructType schema) {
-		DataFrame df = null;
-		try {
-			CSVFormat.Builder builder = CSVFormat.Builder.create();
-			builder.setHeader(); // Make it infer the header names from the first row
-			CSV csv = new CSV(builder.build());
-			csv.schema(schema);
-			df = csv.read(path);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	private static DataFrame loadFeatureFile(File rawDataDir, long warmUpEndTime) {
+		String featureFileName = String.format("%s.csv",
+				Constants.FILE_NAME_FEATURE);
+		File featureFilePath = new File(rawDataDir, featureFileName);
 		
-		return df;
+		// Load the features that start time > warm up time
+		return CsvLoader.load(featureFilePath.toPath(), tuple -> {
+			long startTime = tuple.getLong(Constants.FIELD_NAME_START_TIME);
+			return startTime > warmUpEndTime;
+		});
+	}
+	
+	private static DataFrame loadLabelFile(File rawDataDir, int serverId) {
+		String labelFileName = String.format("%s-%d.csv",
+				Constants.FILE_NAME_LATENCY_PREFIX, serverId);
+		File labelFilePath = new File(rawDataDir, labelFileName);
+		
+		// Load the labels that is as a master transaction
+		return CsvLoader.load(labelFilePath.toPath(), tuple -> 
+			tuple.getBoolean(Constants.FIELD_NAME_IS_MASTER)
+		);
 	}
 	
 	private DataFrame features;
@@ -74,23 +74,23 @@ public class DataSet {
 		this.outlinerStdThreshold = outlinerStdThreshold;
 	}
 	
-	public List<DataSet> trainTestSplit(int trainingDataSize) {
-		List<DataSet> dataSets = new ArrayList<DataSet>();
+	public DataSet[] trainTestSplit(double trainingDataRatio) {
+		int trainingDataSize = (int) (features.size() * trainingDataRatio);
 		
 		DataFrame trainX = features.slice(0, trainingDataSize);
 		DataFrame trainY = labels.slice(0, trainingDataSize);
-		dataSets.add(new DataSet(trainX, trainY, outlinerStdThreshold));
+		DataSet trainSet = new DataSet(trainX, trainY, outlinerStdThreshold);
 		
 		DataFrame testX = features.slice(trainingDataSize, features.nrows());
 		DataFrame testY = labels.slice(trainingDataSize, labels.nrows());
-		dataSets.add(new DataSet(testX, testY, outlinerStdThreshold));
+		DataSet testSet = new DataSet(testX, testY, outlinerStdThreshold);
 		
-		return dataSets;
+		return new DataSet[] {trainSet, testSet};
 	}
 	
 	public DataFrame toTrainingDataFrame(String labelField) {
 		// Remove the id field
-		DataFrame df = features.drop(Constants.ID_FIELD_NAME);
+		DataFrame df = features.drop(Constants.FIELD_NAME_ID);
 		
 		// Merge the label column
 		DataFrame trainingDf = df.merge(labels.column(labelField));
@@ -101,8 +101,8 @@ public class DataSet {
 		double upperBound = mean + std * outlinerStdThreshold;
 		double lowerBound = mean - std * outlinerStdThreshold;
 		trainingDf = DataFrame.of(trainingDf.stream().filter(
-				row -> row.getInt(labelField) > lowerBound && 
-				row.getInt(labelField) < upperBound));
+				row -> row.getDouble(labelField) > lowerBound && 
+				row.getDouble(labelField) < upperBound));
 		
 		return trainingDf;
 	}
@@ -111,28 +111,28 @@ public class DataSet {
 		return features;
 	}
 	
-	public double[] getLabelVectorInDouble(String labelField) {
+	public double[] getLabels(String labelField) {
 		return labels.column(labelField).toDoubleArray();
 	}
 	
 	public double labelMean(String labelField) {
-		int[] nums = labels.column(labelField).toIntArray();
+		double[] nums = labels.column(labelField).toDoubleArray();
 		return mean(nums);
 	}
 	
 	public double labelStd(String labelField) {
-		int[] nums = labels.column(labelField).toIntArray();
+		double[] nums = labels.column(labelField).toDoubleArray();
 		double mean = mean(nums);
 		double sum = 0.0;
-		for (int num : nums) {
+		for (double num : nums) {
 			sum += (num - mean) * (num - mean);
 		}
 		return Math.sqrt(sum / nums.length);
 	}
 	
-	private double mean(int[] nums) {
+	private double mean(double[] nums) {
 		double sum = 0.0;
-		for (int num : nums) {
+		for (double num : nums) {
 			sum += num;
 		}
 		return sum / nums.length;
