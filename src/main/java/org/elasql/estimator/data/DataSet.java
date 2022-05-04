@@ -7,7 +7,6 @@ import java.util.List;
 
 import org.elasql.estimator.Config;
 import org.elasql.estimator.Constants;
-import org.elasql.estimator.NewConstants;
 
 import smile.data.DataFrame;
 
@@ -44,24 +43,24 @@ public class DataSet {
 	
 	private static DataFrame loadFeatureFile(File rawDataDir, long warmUpEndTime) {
 		String featureFileName = String.format("%s.csv",
-				NewConstants.FILE_NAME_FEATURE);
+				Constants.FILE_NAME_FEATURE);
 		File featureFilePath = new File(rawDataDir, featureFileName);
 		
 		// Load the features that start time > warm up time
 		return CsvLoader.load(featureFilePath.toPath(), tuple -> {
-			long startTime = tuple.getLong(NewConstants.FIELD_NAME_START_TIME);
+			long startTime = tuple.getLong(Constants.FIELD_NAME_START_TIME);
 			return startTime > warmUpEndTime;
 		});
 	}
 	
 	private static DataFrame loadLabelFile(File rawDataDir, int serverId) {
 		String labelFileName = String.format("%s-%d.csv",
-				NewConstants.FILE_NAME_LATENCY_PREFIX, serverId);
+				Constants.FILE_NAME_LATENCY_PREFIX, serverId);
 		File labelFilePath = new File(rawDataDir, labelFileName);
 		
 		// Load the labels that is as a master transaction
 		return CsvLoader.load(labelFilePath.toPath(), tuple -> 
-			tuple.getBoolean(NewConstants.FIELD_NAME_IS_MASTER)
+			tuple.getBoolean(Constants.FIELD_NAME_IS_MASTER)
 		);
 	}
 	
@@ -91,7 +90,7 @@ public class DataSet {
 	
 	public DataFrame toTrainingDataFrame(String labelField) {
 		// Remove the id field
-		DataFrame df = features.drop(Constants.ID_FIELD_NAME);
+		DataFrame df = features.drop(Constants.FIELD_NAME_ID);
 		
 		// Merge the label column
 		DataFrame trainingDf = df.merge(labels.column(labelField));

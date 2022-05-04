@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.elasql.estimator.NewConstants;
+import org.elasql.estimator.Constants;
 
 import smile.data.DataFrame;
 import smile.data.Tuple;
@@ -36,8 +36,8 @@ public class Preprocessor {
 		Tuple featTuple = featIter.next();
 		Tuple labelTuple = labelIter.next();
 		while (featIter.hasNext() && labelIter.hasNext()) {
-			long featId = featTuple.getLong(NewConstants.FIELD_NAME_ID);
-			long labelId = labelTuple.getLong(NewConstants.FIELD_NAME_ID);
+			long featId = featTuple.getLong(Constants.FIELD_NAME_ID);
+			long labelId = labelTuple.getLong(Constants.FIELD_NAME_ID);
 			
 			if (featId < labelId) {
 				featTuple = featIter.next();
@@ -56,9 +56,9 @@ public class Preprocessor {
 		DataFrame newLabels = DataFrame.of(newLabelRows, labels.schema());
 		
 		// Drop columns
-		newFeatures = newFeatures.drop(NewConstants.FIELD_NAME_START_TIME);
-		newLabels = newLabels.drop(NewConstants.FIELD_NAME_IS_MASTER,
-				NewConstants.FIELD_NAME_IS_DIST);
+		newFeatures = newFeatures.drop(Constants.FIELD_NAME_START_TIME);
+		newLabels = newLabels.drop(Constants.FIELD_NAME_IS_MASTER,
+				Constants.FIELD_NAME_IS_DIST);
 		
 		return new DataFrame[] {newFeatures, newLabels};
 	}
@@ -85,8 +85,8 @@ public class Preprocessor {
 	private static Stream<Tuple> sort(Stream<Tuple> stream) {
 		return stream.sorted(new Comparator<Tuple>() {
 			public int compare(Tuple t1, Tuple t2) {
-				long id1 = t1.getLong(NewConstants.FIELD_NAME_ID);
-				long id2 = t2.getLong(NewConstants.FIELD_NAME_ID);
+				long id1 = t1.getLong(Constants.FIELD_NAME_ID);
+				long id2 = t2.getLong(Constants.FIELD_NAME_ID);
 				return (int) (id1 - id2);
 			}
 		});

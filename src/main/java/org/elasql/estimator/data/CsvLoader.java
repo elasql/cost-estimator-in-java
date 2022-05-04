@@ -11,7 +11,7 @@ import java.util.function.Predicate;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.elasql.estimator.NewConstants;
+import org.elasql.estimator.Constants;
 
 import smile.data.DataFrame;
 import smile.data.Tuple;
@@ -57,7 +57,7 @@ public class CsvLoader {
 	}
 	
 	private static boolean isHeader(CSVRecord record) {
-		return record.get(0).trim().equals(NewConstants.FIELD_NAME_ID);
+		return record.get(0).trim().equals(Constants.FIELD_NAME_ID);
 	}
 	
 	private static double[] parseDoubleArray(String s) {
@@ -96,11 +96,11 @@ public class CsvLoader {
     		// 'Is Master' and 'Is Distributed' are always BooleanType
     		// If starting with '[', assume it is a Double Array.
     		// Otherwise, treat the rest as Double values.
-            if (fieldName.equals(NewConstants.FIELD_NAME_ID) ||
-            		fieldName.equals(NewConstants.FIELD_NAME_START_TIME))
+            if (fieldName.equals(Constants.FIELD_NAME_ID) ||
+            		fieldName.equals(Constants.FIELD_NAME_START_TIME))
             	types[i] = DataTypes.LongType;
-            else if (fieldName.equals(NewConstants.FIELD_NAME_IS_MASTER) ||
-            		fieldName.equals(NewConstants.FIELD_NAME_IS_DIST))
+            else if (fieldName.equals(Constants.FIELD_NAME_IS_MASTER) ||
+            		fieldName.equals(Constants.FIELD_NAME_IS_DIST))
             	types[i] = DataTypes.BooleanType;
             else {
             	String value = lastValues.get(i).trim();
