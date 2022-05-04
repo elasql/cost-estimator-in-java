@@ -28,27 +28,18 @@ public class DataSet {
 	 * @return
 	 */
 	public static List<DataSet> loadFromRawData(Config config, File rawDataDir) {
+		List<DataSet> dataSets = new ArrayList<DataSet>(config.serverNum());
+		
 		DataFrame featureDf = loadFeatureFile(rawDataDir, config.warmUpEndTime());
 		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
 			DataFrame labelDf = loadLabelFile(rawDataDir, serverId);
 			DataFrame[] dfs = Preprocessor.preprocess(featureDf, labelDf, serverId);
-			System.out.println(dfs[0]);
-			System.out.println(dfs[1]);
+			DataSet dataSet = new DataSet(dfs[0], dfs[1],
+					config.outlinerStdThreshold());
+			dataSets.add(dataSet);
 		}
 		
-		return null;
-		
-//		List<DataSet> dataSets = new ArrayList<DataSet>(config.serverNum());
-//		
-//		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
-//			DataFrame featureDataFrame = loadFeatureFile(rawDataDir, serverId);
-//			DataFrame labelDataFrame = loadLabelFile(rawDataDir, serverId);
-//			DataSet dataSet = new DataSet(featureDataFrame, labelDataFrame,
-//					config.outlinerStdThreshold());
-//			dataSets.add(dataSet);
-//		}
-//		
-//		return dataSets;
+		return dataSets;
 	}
 	
 	private static DataFrame loadFeatureFile(File rawDataDir, long warmUpEndTime) {
@@ -84,18 +75,18 @@ public class DataSet {
 		this.outlinerStdThreshold = outlinerStdThreshold;
 	}
 	
-	public List<DataSet> trainTestSplit(int trainingDataSize) {
-		List<DataSet> dataSets = new ArrayList<DataSet>();
+	public DataSet[] trainTestSplit(double trainingDataRatio) {
+		int trainingDataSize = (int) (features.size() * trainingDataRatio);
 		
 		DataFrame trainX = features.slice(0, trainingDataSize);
 		DataFrame trainY = labels.slice(0, trainingDataSize);
-		dataSets.add(new DataSet(trainX, trainY, outlinerStdThreshold));
+		DataSet trainSet = new DataSet(trainX, trainY, outlinerStdThreshold);
 		
 		DataFrame testX = features.slice(trainingDataSize, features.nrows());
 		DataFrame testY = labels.slice(trainingDataSize, labels.nrows());
-		dataSets.add(new DataSet(testX, testY, outlinerStdThreshold));
+		DataSet testSet = new DataSet(testX, testY, outlinerStdThreshold);
 		
-		return dataSets;
+		return new DataSet[] {trainSet, testSet};
 	}
 	
 	public DataFrame toTrainingDataFrame(String labelField) {
@@ -111,8 +102,8 @@ public class DataSet {
 		double upperBound = mean + std * outlinerStdThreshold;
 		double lowerBound = mean - std * outlinerStdThreshold;
 		trainingDf = DataFrame.of(trainingDf.stream().filter(
-				row -> row.getInt(labelField) > lowerBound && 
-				row.getInt(labelField) < upperBound));
+				row -> row.getDouble(labelField) > lowerBound && 
+				row.getDouble(labelField) < upperBound));
 		
 		return trainingDf;
 	}
@@ -126,23 +117,23 @@ public class DataSet {
 	}
 	
 	public double labelMean(String labelField) {
-		int[] nums = labels.column(labelField).toIntArray();
+		double[] nums = labels.column(labelField).toDoubleArray();
 		return mean(nums);
 	}
 	
 	public double labelStd(String labelField) {
-		int[] nums = labels.column(labelField).toIntArray();
+		double[] nums = labels.column(labelField).toDoubleArray();
 		double mean = mean(nums);
 		double sum = 0.0;
-		for (int num : nums) {
+		for (double num : nums) {
 			sum += (num - mean) * (num - mean);
 		}
 		return Math.sqrt(sum / nums.length);
 	}
 	
-	private double mean(int[] nums) {
+	private double mean(double[] nums) {
 		double sum = 0.0;
-		for (int num : nums) {
+		for (double num : nums) {
 			sum += num;
 		}
 		return sum / nums.length;

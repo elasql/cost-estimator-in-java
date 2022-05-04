@@ -50,12 +50,12 @@ public class EntryPoint {
 		
 		// Load the data set
 		if (logger.isLoggable(Level.INFO))
-			logger.info("Loading data set...");
+			logger.info("Loading and pre-processing data set...");
 		
-		List<DataSet> dataSets = DataSet.load(config, dataSetDir);
+		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
 		
 		if (logger.isLoggable(Level.INFO))
-			logger.info("All data are loaded");
+			logger.info("All data are loaded and processed.");
 		
 		// For each server
 		ReportBuilder reportBuilder = new ReportBuilder();
@@ -63,9 +63,9 @@ public class EntryPoint {
 			
 			// Split the data set to training set and testing set
 			DataSet dataSet = dataSets.get(serverId);
-			List<DataSet> trainTestSets = dataSet.trainTestSplit(config.trainingDataSize());
-			DataSet trainSet = trainTestSets.get(0);
-			DataSet testSet = trainTestSets.get(1);
+			DataSet[] trainTestSets = dataSet.trainTestSplit(config.trainingDataRatio());
+			DataSet trainSet = trainTestSets[0];
+			DataSet testSet = trainTestSets[1];
 			
 			// Train a master model for each server
 			if (logger.isLoggable(Level.INFO))
@@ -111,7 +111,7 @@ public class EntryPoint {
 			logger.info("Loading the data set and the models...");
 
 		// Load the data set
-		List<DataSet> dataSets = DataSet.load(config, dataSetDir);
+		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
 		
 		// Load the models
 		List<SingleServerMasterModel> models = new ArrayList<SingleServerMasterModel>();

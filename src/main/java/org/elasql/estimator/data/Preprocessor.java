@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.elasql.estimator.Config;
 import org.elasql.estimator.NewConstants;
 
 import smile.data.DataFrame;
@@ -47,11 +46,13 @@ public class Preprocessor {
 			} else {
 				newFeatureRows.add(featTuple);
 				newLabelRows.add(labelTuple);
+				featTuple = featIter.next();
+				labelTuple = labelIter.next();
 			}
 		}
 		
 		// Create new DataFrame
-		DataFrame newFeatures = DataFrame.of(newFeatureRows, features.schema());
+		DataFrame newFeatures = DataFrame.of(newFeatureRows, newFeatSchema);
 		DataFrame newLabels = DataFrame.of(newLabelRows, labels.schema());
 		
 		// Drop columns
