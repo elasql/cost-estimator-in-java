@@ -18,6 +18,7 @@ import org.elasql.estimator.data.DataSet;
 import smile.data.DataFrame;
 import smile.data.Tuple;
 import smile.data.formula.Formula;
+import smile.data.type.StructType;
 import smile.regression.RandomForest;
 import smile.validation.RegressionMetrics;
 
@@ -80,5 +81,9 @@ public class SingleServerMasterModel implements Serializable {
 			out.writeObject(this);
 			out.flush();
 		}
+	}
+	
+	public StructType schema() {
+		return ouModels.values().iterator().next().schema();
 	}
 }

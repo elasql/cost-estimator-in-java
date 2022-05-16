@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import smile.data.Tuple;
+import smile.data.type.StructType;
 
 /**
  * Implements the sum-max inference model.
@@ -68,6 +69,10 @@ public class SumMaxSequentialModel {
 		lastRouteDecided = true;
 	}
 	
+	public StructType schema() {
+		return serverOuModels.get(0).schema();
+	}
+	
 	private double predictLatencyTilOu3(int serverId, Tuple features) {
 		SingleServerMasterModel serverModel = serverOuModels.get(serverId);
 		double ou0b = serverModel.predict("OU0 - Broadcast", features);
@@ -81,7 +86,7 @@ public class SumMaxSequentialModel {
 	private double maxOverDependentTxns(List<Long> dependentTxns) {
 		double maxEndTime = 0.0;
 		for (Long dependentTxn : dependentTxns) {
-			Double prevEndTime =  prevEndTimePredictions.get(dependentTxn);
+			Double prevEndTime = prevEndTimePredictions.get(dependentTxn);
 			maxEndTime = Math.max(maxEndTime, prevEndTime.doubleValue());
 		}
 		return maxEndTime;
