@@ -8,6 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.elasql.estimator.data.DataSet;
+import org.elasql.estimator.model.ModelTrainer;
 import org.elasql.estimator.model.SingleServerMasterModel;
 import org.elasql.estimator.model.evaluator.TrainingModelEvaluator;
 
@@ -68,9 +69,12 @@ public class EntryPoint {
 			
 			// Train a master model for each server
 			if (logger.isLoggable(Level.INFO))
-				logger.info("Training models for server #" + serverId + "...");
+				logger.info(String.format("Training models for server #%d (train size: %d, test size: %d)...",
+						serverId, trainSet.dataSize(), testSet.dataSize()));
 			
-			SingleServerMasterModel model = SingleServerMasterModel.fit(trainSet);
+			ModelTrainer modelTrainer = new ModelTrainer(3);
+			SingleServerMasterModel model = modelTrainer.trainWithGridSearch(trainSet);
+			modelTrainer.generateTrainingReport(new File("grid-search-" + serverId + ".csv"));
 			
 			if (logger.isLoggable(Level.INFO))
 				logger.info("Training models for server #" + serverId + " completed");
