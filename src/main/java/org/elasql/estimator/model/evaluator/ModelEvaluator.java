@@ -3,6 +3,8 @@ package org.elasql.estimator.model.evaluator;
 import java.io.File;
 import java.io.IOException;
 
+import org.elasql.estimator.utils.ReportBuilder;
+
 public abstract class ModelEvaluator {
 	
 	protected ReportBuilder reportBuilder;
