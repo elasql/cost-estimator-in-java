@@ -107,7 +107,7 @@ public class DataSet {
 		return trainingDf;
 	}
 	
-	public int dataSize() {
+	public int size() {
 		return features.size();
 	}
 	
