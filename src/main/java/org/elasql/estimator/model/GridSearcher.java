@@ -19,14 +19,14 @@ import smile.regression.RandomForest;
 import smile.validation.CrossValidation;
 import smile.validation.RegressionValidations;
 
-public class ModelTrainer {
-	private static Logger logger = Logger.getLogger(ModelTrainer.class.getName());
+public class GridSearcher {
+	private static Logger logger = Logger.getLogger(GridSearcher.class.getName());
 	
 	private static final String REPORT_HEADER = "OU Name, Tree Count, Max Depth, CV Mean Fit Time, CV Mean MSE";
 	
 	private static final int MAX_TREE_COUNT = 256;
 	private static final int MAX_DEPTH = 32;
-	private static final double BEST_PERFORMANCE_RATIO = 0.05;
+	private static final double BEST_PERFORMANCE_RATIO = 0.01;
 	
 	private static class TestResult {
 		int treeCount;
@@ -43,11 +43,11 @@ public class ModelTrainer {
 	private int foldCountForCv;
 	private ReportBuilder reportBuilder;
 	
-	public ModelTrainer(int foldCountForCv) {
+	public GridSearcher(int foldCountForCv) {
 		this.foldCountForCv = foldCountForCv;
 	}
 	
-	public SingleServerMasterModel trainWithGridSearch(DataSet trainingSet) {
+	public SingleServerMasterModel gridSearch(DataSet trainingSet) {
 		// Create a new training report
 		newReport();
 		
@@ -56,32 +56,14 @@ public class ModelTrainer {
 		// For each OU
 		for (int ouId = 0; ouId < Constants.OU_NAMES.length; ouId++) {
 			String ouName = Constants.OU_NAMES[ouId];
-			RandomForest forest = trainWithGridSearch(ouName, trainingSet);
+			RandomForest forest = gridSearch(ouName, trainingSet);
 			models.put(ouName, forest);
 		}
 		
 		return new SingleServerMasterModel(models);
 	}
 	
-	public SingleServerMasterModel trainWithGivenParameters(DataSet trainingSet,
-			ModelParameters modelParameters) {
-		Map<String, RandomForest> models = new HashMap<String, RandomForest>();
-
-		// For each OU
-		for (int ouId = 0; ouId < Constants.OU_NAMES.length; ouId++) {
-			String ouName = Constants.OU_NAMES[ouId];
-			Formula formula = Formula.lhs(ouName);
-			DataFrame df = trainingSet.toTrainingDataFrame(ouName);
-			RandomForest forest = RandomForest.fit(formula, df,
-					modelParameters.treeCount(ouName), df.ncols() / 3,
-					modelParameters.maxDepth(ouName), 100, 5, 1.0);
-			models.put(ouName, forest);
-		}
-		
-		return new SingleServerMasterModel(models);
-	}
-	
-	private RandomForest trainWithGridSearch(String ouName, DataSet trainingSet) {
+	private RandomForest gridSearch(String ouName, DataSet trainingSet) {
 		Formula formula = Formula.lhs(ouName);
 		DataFrame df = trainingSet.toTrainingDataFrame(ouName);
 		

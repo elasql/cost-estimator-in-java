@@ -31,6 +31,7 @@ public class Config {
 					table.getLong("max_depth").intValue()
 			);
 		}
+		config.modelParameters = mpBuilder.build();
 		
 		return config;
 	}
