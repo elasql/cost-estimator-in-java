@@ -64,6 +64,11 @@ public class SingleServerMasterModel implements Serializable {
 		return model.predict(features);
 	}
 	
+	public double[] importance(String ouName) {
+		RandomForest model = ouModels.get(ouName);
+		return model.importance();
+	}
+	
 	public void saveToFile(File savePath) throws IOException {
 		try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(savePath))) {
 			out.writeObject(this);

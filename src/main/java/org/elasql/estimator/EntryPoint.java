@@ -11,13 +11,13 @@ import java.util.logging.Logger;
 import org.elasql.estimator.data.DataSet;
 import org.elasql.estimator.model.GridSearcher;
 import org.elasql.estimator.model.SingleServerMasterModel;
-import org.elasql.estimator.model.evaluator.TestingModelEvaluator;
-import org.elasql.estimator.model.evaluator.TrainingModelEvaluator;
+import org.elasql.estimator.model.evaluator.ModelEvaluator;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import smile.data.type.StructType;
 
 @Command(name = "estimator", mixinStandardHelpOptions = true, version = "ElaSQL Estimator 0.1",
 		 description = "A cost estimator for ElaSQL transactions")
@@ -60,7 +60,7 @@ public class EntryPoint {
 			logger.info("All data are loaded and processed.");
 		
 		// For each server
-		TrainingModelEvaluator evaluator = new TrainingModelEvaluator();
+		ModelEvaluator evaluator = null;
 		for (int serverId = 0; serverId < dataSets.size(); serverId++) {
 			DataSet dataSet = dataSets.get(serverId);
 			
@@ -77,6 +77,10 @@ public class EntryPoint {
 				logger.info("Training models for server #" + serverId + " completed");
 			
 			// Evaluate the model
+			if (evaluator == null) {
+				StructType featureSchema = model.schema();
+				evaluator = new ModelEvaluator(featureSchema);
+			}
 			evaluator.evaluateModel(serverId, dataSet, model);
 			
 			// Save the model
@@ -120,7 +124,7 @@ public class EntryPoint {
 			logger.info("All data are loaded and processed.");
 		
 		// For each server
-		TrainingModelEvaluator evaluator = new TrainingModelEvaluator();
+		ModelEvaluator evaluator = null;
 		for (int serverId = 0; serverId < dataSets.size(); serverId++) {
 			DataSet dataSet = dataSets.get(serverId);
 			
@@ -135,6 +139,10 @@ public class EntryPoint {
 				logger.info("Training models for server #" + serverId + " completed");
 			
 			// Evaluate the model
+			if (evaluator == null) {
+				StructType featureSchema = model.schema();
+				evaluator = new ModelEvaluator(featureSchema);
+			}
 			evaluator.evaluateModel(serverId, dataSet, model);
 			
 			// Save the model
@@ -186,11 +194,12 @@ public class EntryPoint {
 			logger.info("Testing the models...");
 		
 		// Test the model with data set
-		TestingModelEvaluator evaluator = new TestingModelEvaluator();
+		StructType featureSchema = models.get(0).schema();
+		ModelEvaluator evaluator = new ModelEvaluator(featureSchema);
 		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
 			DataSet dataSet = dataSets.get(serverId);
 			SingleServerMasterModel model = models.get(serverId);
-
+			
 			// Evaluate the model
 			evaluator.evaluateModel(serverId, dataSet, model);
 		}
