@@ -1,7 +1,6 @@
 package org.elasql.estimator.data;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,14 +10,7 @@ import org.elasql.estimator.Constants;
 import smile.data.DataFrame;
 
 public class DataSet {
-
-	public static void main(String[] args) throws IOException {
-		File dataDir = new File("R:\\Research\\2021-Hermes-Control\\java-workspace\\estimator\\test\\training-data");
-		File configFile = new File("R:\\Research\\2021-Hermes-Control\\java-workspace\\estimator\\test\\config.toml");
-		Config config = Config.load(configFile);
-		loadFromRawData(config, dataDir);
-	}
-
+	
 	/**
 	 * Read the data set from the given path and separate the data set
 	 * for each server.
@@ -29,7 +21,8 @@ public class DataSet {
 	public static List<DataSet> loadFromRawData(Config config, File rawDataDir) {
 		List<DataSet> dataSets = new ArrayList<DataSet>(config.serverNum());
 		
-		DataFrame featureDf = loadFeatureFile(rawDataDir, config.warmUpEndTime());
+		DataFrame featureDf = loadFeatureFile(rawDataDir, config.dataStartTime(),
+				config.dataEndTime());
 		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
 			DataFrame labelDf = loadLabelFile(rawDataDir, serverId);
 			DataFrame[] dfs = Preprocessor.preprocess(featureDf, labelDf, serverId);
@@ -41,15 +34,15 @@ public class DataSet {
 		return dataSets;
 	}
 	
-	private static DataFrame loadFeatureFile(File rawDataDir, long warmUpEndTime) {
+	private static DataFrame loadFeatureFile(File rawDataDir, long startTime, long endTime) {
 		String featureFileName = String.format("%s.csv",
 				Constants.FILE_NAME_FEATURE);
 		File featureFilePath = new File(rawDataDir, featureFileName);
 		
 		// Load the features that start time > warm up time
 		return CsvLoader.load(featureFilePath.toPath(), tuple -> {
-			long startTime = tuple.getLong(Constants.FIELD_NAME_START_TIME);
-			return startTime > warmUpEndTime;
+			long txStartTime = tuple.getLong(Constants.FIELD_NAME_START_TIME);
+			return txStartTime > startTime && txStartTime < endTime;
 		});
 	}
 	
@@ -105,6 +98,12 @@ public class DataSet {
 				row.getDouble(labelField) < upperBound));
 		
 		return trainingDf;
+	}
+	
+	public DataSet union(DataSet dataSet) {
+		DataFrame newFeatures = features.union(dataSet.features);
+		DataFrame newLabels = labels.union(dataSet.labels);
+		return new DataSet(newFeatures, newLabels, outlinerStdThreshold);
 	}
 	
 	public int size() {

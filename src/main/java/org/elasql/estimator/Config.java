@@ -10,7 +10,8 @@ public class Config {
 	
 	private int serverNum;
 	private double outlinerStdThreshold;
-	private long warmUpEndTime;
+	private long dataStartTime;
+	private long dataEndTime;
 	private int crossValidationFold;
 	private ModelParameters modelParameters;
 	
@@ -20,7 +21,8 @@ public class Config {
 		Config config = new Config();
 		config.serverNum = toml.getTable("global").getLong("server_num").intValue();
 		config.outlinerStdThreshold = toml.getTable("global").getDouble("outlier_std_threshold").doubleValue();
-		config.warmUpEndTime = toml.getTable("global").getLong("warm_up_end_time").longValue();
+		config.dataStartTime = toml.getTable("global").getLong("data_start_time").longValue();
+		config.dataEndTime = toml.getTable("global").getLong("data_end_time").longValue();
 		config.crossValidationFold = toml.getTable("global").getLong("cross_validation_fold").intValue();
 		
 		ModelParameters.Builder mpBuilder = new ModelParameters.Builder();
@@ -44,8 +46,12 @@ public class Config {
 		return outlinerStdThreshold;
 	}
 	
-	public long warmUpEndTime() {
-		return warmUpEndTime;
+	public long dataStartTime() {
+		return dataStartTime;
+	}
+	
+	public long dataEndTime() {
+		return dataEndTime;
 	}
 	
 	public int crossValidationFold() {

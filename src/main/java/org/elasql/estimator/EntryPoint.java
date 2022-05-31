@@ -160,6 +160,65 @@ public class EntryPoint {
 		return 0;
 	}
 	
+	@Command(name = "train-global", mixinStandardHelpOptions = true)
+	public int trainGlobal(
+			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the data set") File dataSetDir,
+			@Parameters(paramLabel = "MODEL_SAVE_DIR", description = "path to save the model") File modelSaveDir
+		) {
+		
+		// Ensure that the output directory exists
+		try {
+			Files.createDirectories(modelSaveDir.toPath());
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		
+		// Load the configurations
+		Config config = Config.load(configFile);
+		
+		// Load the data set
+		if (logger.isLoggable(Level.INFO))
+			logger.info("Loading and pre-processing data set...");
+		
+		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("All data are loaded and processed.");
+		
+		// Merge the data sets
+		DataSet globalSet = dataSets.get(0);
+		for (int i = 1; i < dataSets.size(); i++) {
+			globalSet = globalSet.union(dataSets.get(i));
+		}
+		
+		// Train a global model
+		if (logger.isLoggable(Level.INFO))
+			logger.info(String.format("Training a global model (data set size: %d)...",
+					globalSet.size()));
+		
+		SingleServerMasterModel model = SingleServerMasterModel.fit(globalSet, config.modelParameters());
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("Training a global model completed");
+		
+		// Evaluate the model
+		ModelEvaluator evaluator = new ModelEvaluator(model.schema());
+		evaluator.evaluateModel(0, globalSet, model);
+		
+		// Save the model
+		try {
+			File modelFilePath = new File(modelSaveDir, "model-global.bin");
+			model.saveToFile(modelFilePath);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		
+		// Save the report
+		evaluator.generateReport(new File("training-global-report.csv"));
+		
+		return 0;
+	}
+	
 	@Command(name = "test", mixinStandardHelpOptions = true)
 	public int test(
 			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir,
@@ -209,6 +268,59 @@ public class EntryPoint {
 		
 		// Save the report
 		evaluator.generateReport(new File("testing-report.csv"));
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("The report is generated.");
+		
+		return 0;
+	}
+	
+	@Command(name = "test-global", mixinStandardHelpOptions = true)
+	public int testGlobal(
+			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir,
+			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir
+		) {
+		
+		// Load the configurations
+		Config config = Config.load(configFile);
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("Loading the data set and the model...");
+
+		// Load the data set
+		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
+		
+		// Merge the data sets
+		DataSet globalSet = dataSets.get(0);
+		for (int i = 1; i < dataSets.size(); i++) {
+			globalSet = globalSet.union(dataSets.get(i));
+		}
+		
+		// Load the models
+		SingleServerMasterModel model = null;
+		try {
+			File modelFilePath = new File(modelDir, "model-global.bin");
+			model = SingleServerMasterModel.loadFromFile(modelFilePath);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("All the data and the model are loaded");
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("Testing the model...");
+		
+		// Test the model with data set
+		StructType featureSchema = model.schema();
+		ModelEvaluator evaluator = new ModelEvaluator(featureSchema);
+		evaluator.evaluateModel(0, globalSet, model);
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("Testing completed. Generating a report...");
+		
+		// Save the report
+		evaluator.generateReport(new File("testing-global-report.csv"));
 		
 		if (logger.isLoggable(Level.INFO))
 			logger.info("The report is generated.");
