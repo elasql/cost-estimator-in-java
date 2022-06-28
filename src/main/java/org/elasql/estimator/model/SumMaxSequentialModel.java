@@ -31,6 +31,10 @@ public class SumMaxSequentialModel {
 		lastTxnEndTimePredictions = new double[serverCount];
 	}
 	
+	public double predictOuLatency(String ouName, int serverId, Tuple features) {
+		return serverOuModels.get(serverId).predict(ouName, features);
+	}
+	
 	public double[] predictNextTxnLatency(long txNum, List<Long> dependentTxns, 
 			long txnStartTime, Tuple[] serverFeatures) {
 		if (txNum <= lastTxNum)
@@ -79,14 +83,16 @@ public class SumMaxSequentialModel {
 		double ou0r = serverModel.predict("OU0 - ROUTE", features);
 		double ou1 = serverModel.predict("OU1 - Generate Plan", features);
 		double ou2 = serverModel.predict("OU2 - Initialize Thread", features);
-		double ou3 = serverModel.predict("OU3 - Acquire Locks", features);
-		return ou0b + ou0r + ou1 + ou2 + ou3;
+		return ou0b + ou0r + ou1 + ou2;
 	}
 	
 	private double maxOverDependentTxns(List<Long> dependentTxns) {
 		double maxEndTime = 0.0;
 		for (Long dependentTxn : dependentTxns) {
 			Double prevEndTime = prevEndTimePredictions.get(dependentTxn);
+			if (prevEndTime == null) {
+				throw new RuntimeException("There is no record for " + dependentTxn);
+			}
 			maxEndTime = Math.max(maxEndTime, prevEndTime.doubleValue());
 		}
 		return maxEndTime;

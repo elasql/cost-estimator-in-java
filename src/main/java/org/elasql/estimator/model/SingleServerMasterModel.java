@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.elasql.estimator.Constants;
-import org.elasql.estimator.data.DataSet;
+import org.elasql.estimator.data.OuDataSet;
 
 import smile.data.DataFrame;
 import smile.data.Tuple;
@@ -22,7 +22,7 @@ import smile.regression.RandomForest;
 public class SingleServerMasterModel implements Serializable {
 	private static final long serialVersionUID = 20220412001L;
 	
-	public static SingleServerMasterModel fit(DataSet trainingSet,
+	public static SingleServerMasterModel fit(OuDataSet trainingSet,
 			ModelParameters modelParameters) {
 		Map<String, RandomForest> models = new HashMap<String, RandomForest>();
 

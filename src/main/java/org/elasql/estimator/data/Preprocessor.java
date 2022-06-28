@@ -56,14 +56,13 @@ public class Preprocessor {
 		DataFrame newLabels = DataFrame.of(newLabelRows, labels.schema());
 		
 		// Drop columns
-		newFeatures = newFeatures.drop(Constants.FIELD_NAME_START_TIME);
 		newLabels = newLabels.drop(Constants.FIELD_NAME_IS_MASTER,
 				Constants.FIELD_NAME_IS_DIST);
 		
 		return new DataFrame[] {newFeatures, newLabels};
 	}
 	
-	private static Stream<Tuple> separateArrayFeatures(Stream<Tuple> stream,
+	public static Stream<Tuple> separateArrayFeatures(Stream<Tuple> stream,
 			StructType oldSchema, StructType newSchema, int serverId) {
 		return stream.map(tuple -> {
 			Object[] row = new Object[oldSchema.length()];
@@ -82,7 +81,7 @@ public class Preprocessor {
 		});
 	}
 	
-	private static Stream<Tuple> sort(Stream<Tuple> stream) {
+	public static Stream<Tuple> sort(Stream<Tuple> stream) {
 		return stream.sorted(new Comparator<Tuple>() {
 			public int compare(Tuple t1, Tuple t2) {
 				long id1 = t1.getLong(Constants.FIELD_NAME_ID);
@@ -92,7 +91,7 @@ public class Preprocessor {
 		});
 	}
 	
-	private static StructType newSchemaWithSeparatedArrays(StructType schema) {
+	public static StructType newSchemaWithSeparatedArrays(StructType schema) {
 		String[] names = new String[schema.length()];
         DataType[] newTypes = new DataType[schema.length()];
         for (int i = 0; i < names.length; i++) {

@@ -4,12 +4,11 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.elasql.estimator.Config;
 import org.elasql.estimator.Constants;
 
 import smile.data.DataFrame;
 
-public class DataSet {
+public class OuDataSet {
 	
 	/**
 	 * Read the data set from the given path and separate the data set
@@ -18,16 +17,16 @@ public class DataSet {
 	 * @param rawDataDir
 	 * @return
 	 */
-	public static List<DataSet> loadFromRawData(Config config, File rawDataDir) {
-		List<DataSet> dataSets = new ArrayList<DataSet>(config.serverNum());
+	public static List<OuDataSet> loadFromRawData(int serverNum, long dataStartTime,
+			long dataEndTime, double outlinerStdThreshold, File rawDataDir) {
+		List<OuDataSet> dataSets = new ArrayList<OuDataSet>(serverNum);
 		
-		DataFrame featureDf = loadFeatureFile(rawDataDir, config.dataStartTime(),
-				config.dataEndTime());
-		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
+		DataFrame featureDf = loadFeatureFile(rawDataDir, dataStartTime,
+				dataEndTime);
+		for (int serverId = 0; serverId < serverNum; serverId++) {
 			DataFrame labelDf = loadLabelFile(rawDataDir, serverId);
 			DataFrame[] dfs = Preprocessor.preprocess(featureDf, labelDf, serverId);
-			DataSet dataSet = new DataSet(dfs[0], dfs[1],
-					config.outlinerStdThreshold());
+			OuDataSet dataSet = new OuDataSet(dfs[0], dfs[1], outlinerStdThreshold);
 			dataSets.add(dataSet);
 		}
 		
@@ -61,29 +60,30 @@ public class DataSet {
 	private DataFrame labels;
 	private double outlinerStdThreshold;
 	
-	public DataSet(DataFrame features, DataFrame labels, double outlinerStdThreshold) {
+	public OuDataSet(DataFrame features, DataFrame labels, double outlinerStdThreshold) {
 		this.features = features;
 		this.labels = labels;
 		this.outlinerStdThreshold = outlinerStdThreshold;
 	}
 	
-	public DataSet[] trainTestSplit(double trainingDataRatio) {
+	public OuDataSet[] trainTestSplit(double trainingDataRatio) {
 		int trainingDataSize = (int) (features.size() * trainingDataRatio);
 		
 		DataFrame trainX = features.slice(0, trainingDataSize);
 		DataFrame trainY = labels.slice(0, trainingDataSize);
-		DataSet trainSet = new DataSet(trainX, trainY, outlinerStdThreshold);
+		OuDataSet trainSet = new OuDataSet(trainX, trainY, outlinerStdThreshold);
 		
 		DataFrame testX = features.slice(trainingDataSize, features.nrows());
 		DataFrame testY = labels.slice(trainingDataSize, labels.nrows());
-		DataSet testSet = new DataSet(testX, testY, outlinerStdThreshold);
+		OuDataSet testSet = new OuDataSet(testX, testY, outlinerStdThreshold);
 		
-		return new DataSet[] {trainSet, testSet};
+		return new OuDataSet[] {trainSet, testSet};
 	}
 	
 	public DataFrame toTrainingDataFrame(String labelField) {
-		// Remove the id field
-		DataFrame df = features.drop(Constants.FIELD_NAME_ID);
+		// Remove the id field and start time field
+		DataFrame df = features.drop(Constants.FIELD_NAME_ID,
+				Constants.FIELD_NAME_START_TIME);
 		
 		// Merge the label column
 		DataFrame trainingDf = df.merge(labels.column(labelField));
@@ -100,10 +100,10 @@ public class DataSet {
 		return trainingDf;
 	}
 	
-	public DataSet union(DataSet dataSet) {
+	public OuDataSet union(OuDataSet dataSet) {
 		DataFrame newFeatures = features.union(dataSet.features);
 		DataFrame newLabels = labels.union(dataSet.labels);
-		return new DataSet(newFeatures, newLabels, outlinerStdThreshold);
+		return new OuDataSet(newFeatures, newLabels, outlinerStdThreshold);
 	}
 	
 	public int size() {
@@ -112,6 +112,10 @@ public class DataSet {
 	
 	public DataFrame getFeatures() {
 		return features;
+	}
+	
+	public DataFrame getLabels() {
+		return labels;
 	}
 	
 	public double[] getLabels(String labelField) {

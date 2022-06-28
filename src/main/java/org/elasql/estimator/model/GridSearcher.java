@@ -10,7 +10,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.elasql.estimator.Constants;
-import org.elasql.estimator.data.DataSet;
+import org.elasql.estimator.data.OuDataSet;
 import org.elasql.estimator.utils.ReportBuilder;
 
 import smile.data.DataFrame;
@@ -47,7 +47,7 @@ public class GridSearcher {
 		this.foldCountForCv = foldCountForCv;
 	}
 	
-	public SingleServerMasterModel gridSearch(DataSet trainingSet) {
+	public SingleServerMasterModel gridSearch(OuDataSet trainingSet) {
 		// Create a new training report
 		newReport();
 		
@@ -63,7 +63,7 @@ public class GridSearcher {
 		return new SingleServerMasterModel(models);
 	}
 	
-	private RandomForest gridSearch(String ouName, DataSet trainingSet) {
+	private RandomForest gridSearch(String ouName, OuDataSet trainingSet) {
 		Formula formula = Formula.lhs(ouName);
 		DataFrame df = trainingSet.toTrainingDataFrame(ouName);
 		

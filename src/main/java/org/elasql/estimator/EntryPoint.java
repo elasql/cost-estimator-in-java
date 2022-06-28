@@ -8,10 +8,13 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.elasql.estimator.data.DataSet;
+import org.elasql.estimator.data.TotalLatencyDataSet;
+import org.elasql.estimator.data.OuDataSet;
 import org.elasql.estimator.model.GridSearcher;
 import org.elasql.estimator.model.SingleServerMasterModel;
-import org.elasql.estimator.model.evaluator.ModelEvaluator;
+import org.elasql.estimator.model.SumMaxSequentialModel;
+import org.elasql.estimator.model.evaluator.OuModelEvaluator;
+import org.elasql.estimator.model.evaluator.SumMaxModelEvaluator;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -54,15 +57,17 @@ public class EntryPoint {
 		if (logger.isLoggable(Level.INFO))
 			logger.info("Loading and pre-processing data set...");
 		
-		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
+		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
+				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
+				dataSetDir);
 		
 		if (logger.isLoggable(Level.INFO))
 			logger.info("All data are loaded and processed.");
 		
 		// For each server
-		ModelEvaluator evaluator = null;
+		OuModelEvaluator evaluator = null;
 		for (int serverId = 0; serverId < dataSets.size(); serverId++) {
-			DataSet dataSet = dataSets.get(serverId);
+			OuDataSet dataSet = dataSets.get(serverId);
 			
 			// Train a master model for each server
 			if (logger.isLoggable(Level.INFO))
@@ -79,7 +84,7 @@ public class EntryPoint {
 			// Evaluate the model
 			if (evaluator == null) {
 				StructType featureSchema = model.schema();
-				evaluator = new ModelEvaluator(featureSchema);
+				evaluator = OuModelEvaluator.newWithFeatureSchema(featureSchema);
 			}
 			evaluator.evaluateModel(serverId, dataSet, model);
 			
@@ -118,15 +123,17 @@ public class EntryPoint {
 		if (logger.isLoggable(Level.INFO))
 			logger.info("Loading and pre-processing data set...");
 		
-		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
+		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
+				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
+				dataSetDir);
 		
 		if (logger.isLoggable(Level.INFO))
 			logger.info("All data are loaded and processed.");
 		
 		// For each server
-		ModelEvaluator evaluator = null;
+		OuModelEvaluator evaluator = null;
 		for (int serverId = 0; serverId < dataSets.size(); serverId++) {
-			DataSet dataSet = dataSets.get(serverId);
+			OuDataSet dataSet = dataSets.get(serverId);
 			
 			// Train a master model for each server
 			if (logger.isLoggable(Level.INFO))
@@ -141,7 +148,7 @@ public class EntryPoint {
 			// Evaluate the model
 			if (evaluator == null) {
 				StructType featureSchema = model.schema();
-				evaluator = new ModelEvaluator(featureSchema);
+				evaluator = OuModelEvaluator.newWithFeatureSchema(featureSchema);
 			}
 			evaluator.evaluateModel(serverId, dataSet, model);
 			
@@ -180,13 +187,15 @@ public class EntryPoint {
 		if (logger.isLoggable(Level.INFO))
 			logger.info("Loading and pre-processing data set...");
 		
-		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
+		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
+				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
+				dataSetDir);
 		
 		if (logger.isLoggable(Level.INFO))
 			logger.info("All data are loaded and processed.");
 		
 		// Merge the data sets
-		DataSet globalSet = dataSets.get(0);
+		OuDataSet globalSet = dataSets.get(0);
 		for (int i = 1; i < dataSets.size(); i++) {
 			globalSet = globalSet.union(dataSets.get(i));
 		}
@@ -202,7 +211,7 @@ public class EntryPoint {
 			logger.info("Training a global model completed");
 		
 		// Evaluate the model
-		ModelEvaluator evaluator = new ModelEvaluator(model.schema());
+		OuModelEvaluator evaluator = OuModelEvaluator.newWithFeatureSchema(model.schema());
 		evaluator.evaluateModel(0, globalSet, model);
 		
 		// Save the model
@@ -232,7 +241,9 @@ public class EntryPoint {
 			logger.info("Loading the data set and the models...");
 
 		// Load the data set
-		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
+		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
+				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
+				dataSetDir);
 		
 		// Load the models
 		List<SingleServerMasterModel> models = new ArrayList<SingleServerMasterModel>();
@@ -254,9 +265,9 @@ public class EntryPoint {
 		
 		// Test the model with data set
 		StructType featureSchema = models.get(0).schema();
-		ModelEvaluator evaluator = new ModelEvaluator(featureSchema);
+		OuModelEvaluator evaluator = OuModelEvaluator.newWithFeatureSchema(featureSchema);
 		for (int serverId = 0; serverId < config.serverNum(); serverId++) {
-			DataSet dataSet = dataSets.get(serverId);
+			OuDataSet dataSet = dataSets.get(serverId);
 			SingleServerMasterModel model = models.get(serverId);
 			
 			// Evaluate the model
@@ -288,10 +299,12 @@ public class EntryPoint {
 			logger.info("Loading the data set and the model...");
 
 		// Load the data set
-		List<DataSet> dataSets = DataSet.loadFromRawData(config, dataSetDir);
+		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
+				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
+				dataSetDir);
 		
 		// Merge the data sets
-		DataSet globalSet = dataSets.get(0);
+		OuDataSet globalSet = dataSets.get(0);
 		for (int i = 1; i < dataSets.size(); i++) {
 			globalSet = globalSet.union(dataSets.get(i));
 		}
@@ -313,7 +326,7 @@ public class EntryPoint {
 		
 		// Test the model with data set
 		StructType featureSchema = model.schema();
-		ModelEvaluator evaluator = new ModelEvaluator(featureSchema);
+		OuModelEvaluator evaluator = OuModelEvaluator.newWithFeatureSchema(featureSchema);
 		evaluator.evaluateModel(0, globalSet, model);
 		
 		if (logger.isLoggable(Level.INFO))
@@ -321,6 +334,59 @@ public class EntryPoint {
 		
 		// Save the report
 		evaluator.generateReport(new File("testing-global-report.csv"));
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("The report is generated.");
+		
+		return 0;
+	}
+	
+	@Command(name = "test-sum-max", mixinStandardHelpOptions = true)
+	public int testSumMax(
+			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir,
+			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir
+		) {
+		
+		// Load the configurations
+		Config config = Config.load(configFile);
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("Loading the data set and the models...");
+		
+		// Load the data set
+		TotalLatencyDataSet dataSet = TotalLatencyDataSet.load(
+				dataSetDir, config.serverNum());
+		
+		// Load the models
+		List<SingleServerMasterModel> models = new ArrayList<SingleServerMasterModel>();
+		try {
+			for (int serverId = 0; serverId < config.serverNum(); serverId++) {
+				File modelFilePath = new File(modelDir, "model-" + serverId + ".bin");
+				SingleServerMasterModel model = SingleServerMasterModel.loadFromFile(modelFilePath);
+				models.add(model);
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		
+		// Create a sum-max model
+		SumMaxSequentialModel sumMaxModel = new SumMaxSequentialModel(models);
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("All the data and models are loaded");
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("Testing the models...");
+		
+		// Perform model evaluation (need a evaluator)
+		SumMaxModelEvaluator evaluator = SumMaxModelEvaluator.newWithServerNumber(config.serverNum());
+		evaluator.evaluateModel(dataSet, sumMaxModel);
+		
+		if (logger.isLoggable(Level.INFO))
+			logger.info("Testing completed. Generating a report...");
+		
+		// Save the report
+		evaluator.generateReport(new File("sum-max-report.csv"));
 		
 		if (logger.isLoggable(Level.INFO))
 			logger.info("The report is generated.");
