@@ -18,7 +18,7 @@ public class OuDataSet {
 	 * @return
 	 */
 	public static List<OuDataSet> loadFromRawData(int serverNum, long dataStartTime,
-			long dataEndTime, double outlinerStdThreshold, File rawDataDir) {
+			long dataEndTime, double outlierStdThreshold, File rawDataDir) {
 		List<OuDataSet> dataSets = new ArrayList<OuDataSet>(serverNum);
 		
 		DataFrame featureDf = loadFeatureFile(rawDataDir, dataStartTime,
@@ -26,7 +26,7 @@ public class OuDataSet {
 		for (int serverId = 0; serverId < serverNum; serverId++) {
 			DataFrame labelDf = loadLabelFile(rawDataDir, serverId);
 			DataFrame[] dfs = Preprocessor.preprocess(featureDf, labelDf, serverId);
-			OuDataSet dataSet = new OuDataSet(dfs[0], dfs[1], outlinerStdThreshold);
+			OuDataSet dataSet = new OuDataSet(dfs[0], dfs[1], outlierStdThreshold);
 			dataSets.add(dataSet);
 		}
 		
@@ -34,8 +34,7 @@ public class OuDataSet {
 	}
 	
 	private static DataFrame loadFeatureFile(File rawDataDir, long startTime, long endTime) {
-		String featureFileName = String.format("%s.csv",
-				Constants.FILE_NAME_FEATURE);
+		String featureFileName = String.format("%s.csv", Constants.FILE_NAME_FEATURE);
 		File featureFilePath = new File(rawDataDir, featureFileName);
 		
 		// Load the features that start time > warm up time
@@ -58,12 +57,12 @@ public class OuDataSet {
 	
 	private DataFrame features;
 	private DataFrame labels;
-	private double outlinerStdThreshold;
+	private double outlierStdThreshold;
 	
-	public OuDataSet(DataFrame features, DataFrame labels, double outlinerStdThreshold) {
+	public OuDataSet(DataFrame features, DataFrame labels, double outlierStdThreshold) {
 		this.features = features;
 		this.labels = labels;
-		this.outlinerStdThreshold = outlinerStdThreshold;
+		this.outlierStdThreshold = outlierStdThreshold;
 	}
 	
 	public OuDataSet[] trainTestSplit(double trainingDataRatio) {
@@ -71,11 +70,11 @@ public class OuDataSet {
 		
 		DataFrame trainX = features.slice(0, trainingDataSize);
 		DataFrame trainY = labels.slice(0, trainingDataSize);
-		OuDataSet trainSet = new OuDataSet(trainX, trainY, outlinerStdThreshold);
+		OuDataSet trainSet = new OuDataSet(trainX, trainY, outlierStdThreshold);
 		
 		DataFrame testX = features.slice(trainingDataSize, features.nrows());
 		DataFrame testY = labels.slice(trainingDataSize, labels.nrows());
-		OuDataSet testSet = new OuDataSet(testX, testY, outlinerStdThreshold);
+		OuDataSet testSet = new OuDataSet(testX, testY, outlierStdThreshold);
 		
 		return new OuDataSet[] {trainSet, testSet};
 	}
@@ -88,11 +87,11 @@ public class OuDataSet {
 		// Merge the label column
 		DataFrame trainingDf = df.merge(labels.column(labelField));
 		
-		// Filter outliners
+		// Filter outliers
 		double mean = labelMean(labelField);
 		double std = labelStd(labelField);
-		double upperBound = mean + std * outlinerStdThreshold;
-		double lowerBound = mean - std * outlinerStdThreshold;
+		double upperBound = mean + std * outlierStdThreshold;
+		double lowerBound = mean - std * outlierStdThreshold;
 		trainingDf = DataFrame.of(trainingDf.stream().filter(
 				row -> row.getDouble(labelField) > lowerBound && 
 				row.getDouble(labelField) < upperBound));
@@ -103,7 +102,7 @@ public class OuDataSet {
 	public OuDataSet union(OuDataSet dataSet) {
 		DataFrame newFeatures = features.union(dataSet.features);
 		DataFrame newLabels = labels.union(dataSet.labels);
-		return new OuDataSet(newFeatures, newLabels, outlinerStdThreshold);
+		return new OuDataSet(newFeatures, newLabels, outlierStdThreshold);
 	}
 	
 	public int size() {

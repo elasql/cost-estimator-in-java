@@ -39,8 +39,8 @@ public class EntryPoint {
 	
 	@Command(name = "grid-search", mixinStandardHelpOptions = true)
 	public int gridSearch(
-			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the data set") File dataSetDir,
-			@Parameters(paramLabel = "MODEL_SAVE_DIR", description = "path to save the model") File modelSaveDir
+			@Parameters(paramLabel = "MODEL_SAVE_DIR", description = "path to save the model") File modelSaveDir,
+			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the data set") File dataSetDir
 		) {
 		
 		// Ensure that the output directory exists
@@ -58,7 +58,7 @@ public class EntryPoint {
 			logger.info("Loading and pre-processing data set...");
 		
 		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
-				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
+				config.dataStartTime(), config.dataEndTime(), config.outlierStdThreshold(),
 				dataSetDir);
 		
 		if (logger.isLoggable(Level.INFO))
@@ -105,10 +105,10 @@ public class EntryPoint {
 	
 	@Command(name = "train", mixinStandardHelpOptions = true)
 	public int train(
-			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the data set") File dataSetDir,
-			@Parameters(paramLabel = "MODEL_SAVE_DIR", description = "path to save the model") File modelSaveDir
+			@Parameters(paramLabel = "MODEL_SAVE_DIR", description = "path to save the model") File modelSaveDir,
+			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the data set") File[] dataSetDirs
 		) {
-		
+
 		// Ensure that the output directory exists
 		try {
 			Files.createDirectories(modelSaveDir.toPath());
@@ -123,10 +123,24 @@ public class EntryPoint {
 		if (logger.isLoggable(Level.INFO))
 			logger.info("Loading and pre-processing data set...");
 		
-		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
-				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
-				dataSetDir);
-		
+		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(), 
+			config.dataStartTime(), config.dataEndTime(), config.outlierStdThreshold(), 
+			dataSetDirs[0]);
+
+		// Aggregate multiple datasets
+		for (int i = 1; i < dataSetDirs.length; i++) {
+			List<OuDataSet> newDataSets = OuDataSet.loadFromRawData(config.serverNum(),
+				config.dataStartTime(), config.dataEndTime(), config.outlierStdThreshold(),
+				dataSetDirs[i]);
+
+			int j = 0;
+
+			for (OuDataSet dataSet : dataSets) {
+				dataSet = dataSet.union(newDataSets.get(j));
+				j++;
+			}
+		}
+
 		if (logger.isLoggable(Level.INFO))
 			logger.info("All data are loaded and processed.");
 		
@@ -169,8 +183,8 @@ public class EntryPoint {
 	
 	@Command(name = "train-global", mixinStandardHelpOptions = true)
 	public int trainGlobal(
-			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the data set") File dataSetDir,
-			@Parameters(paramLabel = "MODEL_SAVE_DIR", description = "path to save the model") File modelSaveDir
+			@Parameters(paramLabel = "MODEL_SAVE_DIR", description = "path to save the model") File modelSaveDir,
+			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the data set") File dataSetDir
 		) {
 		
 		// Ensure that the output directory exists
@@ -188,7 +202,7 @@ public class EntryPoint {
 			logger.info("Loading and pre-processing data set...");
 		
 		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
-				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
+				config.dataStartTime(), config.dataEndTime(), config.outlierStdThreshold(),
 				dataSetDir);
 		
 		if (logger.isLoggable(Level.INFO))
@@ -230,8 +244,8 @@ public class EntryPoint {
 	
 	@Command(name = "test", mixinStandardHelpOptions = true)
 	public int test(
-			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir,
-			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir
+			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir,
+			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir
 		) {
 		
 		// Load the configurations
@@ -242,7 +256,7 @@ public class EntryPoint {
 
 		// Load the data set
 		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
-				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
+				config.dataStartTime(), config.dataEndTime(), config.outlierStdThreshold(),
 				dataSetDir);
 		
 		// Load the models
@@ -288,8 +302,8 @@ public class EntryPoint {
 	
 	@Command(name = "test-global", mixinStandardHelpOptions = true)
 	public int testGlobal(
-			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir,
-			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir
+			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir,
+			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir
 		) {
 		
 		// Load the configurations
@@ -300,7 +314,7 @@ public class EntryPoint {
 
 		// Load the data set
 		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(),
-				config.dataStartTime(), config.dataEndTime(), config.outlinerStdThreshold(),
+				config.dataStartTime(), config.dataEndTime(), config.outlierStdThreshold(),
 				dataSetDir);
 		
 		// Merge the data sets
@@ -343,8 +357,8 @@ public class EntryPoint {
 	
 	@Command(name = "test-sum-max", mixinStandardHelpOptions = true)
 	public int testSumMax(
-			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir,
-			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir
+			@Parameters(paramLabel = "MODEL_DIR", description = "path to the saved models") File modelDir,
+			@Parameters(paramLabel = "DATA_SET_DIR", description = "path to the testing data set") File dataSetDir
 		) {
 		
 		// Load the configurations

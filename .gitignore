@@ -6,11 +6,20 @@
 .project
 target/
 
+### Dataset ###
+dataset/
+
+### Models ###
+models/
+
+### Config ###
+config.toml
 
 ### Testing ###
 test/
 
 ### Others ###
 design
+*.csv
 
 .DS_Store

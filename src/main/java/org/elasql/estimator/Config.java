@@ -9,7 +9,7 @@ import com.moandjiezana.toml.Toml;
 public class Config {
 	
 	private int serverNum;
-	private double outlinerStdThreshold;
+	private double outlierStdThreshold;
 	private long dataStartTime;
 	private long dataEndTime;
 	private int crossValidationFold;
@@ -20,10 +20,10 @@ public class Config {
 		
 		Config config = new Config();
 		config.serverNum = toml.getTable("global").getLong("server_num").intValue();
-		config.outlinerStdThreshold = toml.getTable("global").getDouble("outlier_std_threshold").doubleValue();
-		config.dataStartTime = toml.getTable("global").getLong("data_start_time").longValue();
-		config.dataEndTime = toml.getTable("global").getLong("data_end_time").longValue();
-		config.crossValidationFold = toml.getTable("global").getLong("cross_validation_fold").intValue();
+		config.outlierStdThreshold = toml.getTable("training").getDouble("outlier_std_threshold").doubleValue();
+		config.dataStartTime = toml.getTable("preprocessor").getLong("warmup_time").longValue();
+		config.dataEndTime = toml.getTable("preprocessor").getLong("end_time").longValue();
+		config.crossValidationFold = toml.getTable("training").getLong("cross_validation_fold").intValue();
 		
 		ModelParameters.Builder mpBuilder = new ModelParameters.Builder();
 		for (Toml table : toml.getTable("global").getTables("model_parameters")) {
@@ -42,8 +42,8 @@ public class Config {
 		return serverNum;
 	}
 	
-	public double outlinerStdThreshold() {
-		return outlinerStdThreshold;
+	public double outlierStdThreshold() {
+		return outlierStdThreshold;
 	}
 	
 	public long dataStartTime() {
