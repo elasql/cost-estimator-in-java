@@ -122,7 +122,7 @@ public class EntryPoint {
 		// Load the data set
 		if (logger.isLoggable(Level.INFO))
 			logger.info("Loading and pre-processing data set...");
-		
+
 		List<OuDataSet> dataSets = OuDataSet.loadFromRawData(config.serverNum(), 
 			config.dataStartTime(), config.dataEndTime(), config.outlierStdThreshold(), 
 			dataSetDirs[0]);
@@ -133,11 +133,8 @@ public class EntryPoint {
 				config.dataStartTime(), config.dataEndTime(), config.outlierStdThreshold(),
 				dataSetDirs[i]);
 
-			int j = 0;
-
-			for (OuDataSet dataSet : dataSets) {
-				dataSet = dataSet.union(newDataSets.get(j));
-				j++;
+			for (int j = 0; j < dataSets.size(); j++) {
+				dataSets.set(j, dataSets.get(j).union(newDataSets.get(j)));
 			}
 		}
 
